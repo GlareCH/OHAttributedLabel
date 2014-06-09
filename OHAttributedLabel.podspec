@@ -22,6 +22,4 @@ Pod::Spec.new do |s|
 
   s.framework = 'CoreText'
   s.requires_arc = true
-  
-  s.deprecated_in_favor_of = 'DTCoreText'
 end
