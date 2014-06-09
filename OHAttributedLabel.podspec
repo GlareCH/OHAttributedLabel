@@ -15,7 +15,7 @@ Pod::Spec.new do |s|
 		
   s.homepage = 'https://github.com/AliSoftware/OHAttributedLabel'
   s.author   = { 'AliSoftware' => 'olivier.halligon+ae@gmail.com' }
-  s.source   = { :git => 'https://github.com/AliSoftware/OHAttributedLabel.git', :tag => s.version.to_s }
+  s.source   = { :git => 'https://github.com/GlareCH/OHAttributedLabel.git', :tag => s.version.to_s }
 
   s.source_files = 'OHAttributedLabel/Source/*.{h,m}', 'OHAttributedLabel/PrivateUtils/*.{h,m}', 'OHAttributedLabel/TagParsers/*.{h,m}'
   s.public_header_files = 'OHAttributedLabel/Source/*.h', 'OHAttributedLabel/TagParsers/*.h'
