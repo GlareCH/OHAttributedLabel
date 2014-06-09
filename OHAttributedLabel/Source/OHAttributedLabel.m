@@ -177,6 +177,7 @@ NSDataDetector* sharedReusableDataDetector(NSTextCheckingTypes types)
 -(void)dealloc
 {
 	[self resetTextFrame]; // CFRelease the text frame
+    [[OHAttributedLabel relatedHrefLabelsCache] removeObjectForKey:self];
 }
 
 
@@ -446,6 +447,38 @@ NSDataDetector* sharedReusableDataDetector(NSTextCheckingTypes types)
 
 -(void)_gestureRecognised:(UIGestureRecognizer*)recogniser
 {
+    //////////////////////////////////////////////////////////////////////
+    NSArray * relatedHrefLabels = [[OHAttributedLabel relatedHrefLabelsCache] objectForKey:self];
+    if (relatedHrefLabels.count > 0) {
+        switch (recogniser.state) {
+            case UIGestureRecognizerStateBegan: {
+                [relatedHrefLabels enumerateObjectsUsingBlock:^(OHAttributedLabel *obj, NSUInteger idx, BOOL *stop) {
+                    if (![obj isEqual:self]) {
+                        NSTextCheckingResult *activeLink = [obj linkAtCharacterIndex:0];
+                        [obj setValue:activeLink forKey:@"activeLink"];
+                        [obj setNeedsDisplay];
+                    }
+                }];
+            }
+                break;
+            case UIGestureRecognizerStateEnded:
+            case UIGestureRecognizerStateCancelled:
+            case UIGestureRecognizerStateFailed: {
+                [relatedHrefLabels enumerateObjectsUsingBlock:^(OHAttributedLabel *obj, NSUInteger idx, BOOL *stop) {
+                    if (![obj isEqual:self]) {
+                        [obj setValue:nil forKey:@"activeLink"];
+                        [obj setNeedsDisplay];
+                    }
+                }];
+            }
+                break;
+            case UIGestureRecognizerStateChanged:
+            case UIGestureRecognizerStatePossible:
+                break;
+        }        
+    }
+
+    //////////////////////////////////////////////////////////////////////
     CGPoint pt = [recogniser locationInView:self];
     
     switch (recogniser.state) {
@@ -915,5 +948,18 @@ NSDataDetector* sharedReusableDataDetector(NSTextCheckingTypes types)
 	[super setNumberOfLines:nbLines];
 }
 #endif
+
++ (NSCache *) relatedHrefLabelsCache {
+    static dispatch_once_t onceToken;
+    static NSCache *relatedHrefLabelsCache;
+    dispatch_once(&onceToken, ^{
+        relatedHrefLabelsCache = [[NSCache alloc] init];
+    });
+    return relatedHrefLabelsCache;
+}
+
+- (void) setRelatedHrefLabels:(NSArray *)hrefLabels {
+    [[OHAttributedLabel relatedHrefLabelsCache] setObject:hrefLabels forKey:self];
+}
 
 @end

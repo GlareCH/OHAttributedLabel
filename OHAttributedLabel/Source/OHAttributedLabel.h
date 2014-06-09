@@ -117,4 +117,10 @@ __attribute__((deprecated("You should remove links directly to from NSAttributed
 @property(nonatomic, assign) BOOL centerVertically;
 //! Allows to draw text past the bottom of the view if need. May help in rare cases (like using Emoji)
 @property(nonatomic, assign) BOOL extendBottomToFit;
+
+/**
+ * 超链接高亮时，也高亮相关的 Labels
+ */
+- (void) setRelatedHrefLabels:(NSArray *)hrefLabels;
+
 @end
