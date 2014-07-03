@@ -121,6 +121,6 @@ __attribute__((deprecated("You should remove links directly to from NSAttributed
 /**
  * 超链接高亮时，也高亮相关的 Labels
  */
-- (void) setRelatedHrefLabels:(NSArray *)hrefLabels;
+- (void) setRelatedHrefLabels:(NSArray *)relatedHrefLabels;
 
 @end

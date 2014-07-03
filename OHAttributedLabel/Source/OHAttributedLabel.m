@@ -49,6 +49,13 @@
 /////////////////////////////////////////////////////////////////////////////////////
 
 
+@interface OHAttributedRelatedObject : NSObject
+@property (nonatomic, assign) OHAttributedLabel * relatedLabel;
+@end
+@implementation OHAttributedRelatedObject
+@synthesize relatedLabel = _relatedLabel;
+@end
+
 const int UITextAlignmentJustify = ((UITextAlignment)kCTJustifiedTextAlignment);
 
 @interface OHAttributedLabel(/* Private */) <UIGestureRecognizerDelegate>
@@ -73,6 +80,9 @@ const int UITextAlignmentJustify = ((UITextAlignment)kCTJustifiedTextAlignment);
 -(void)warnAboutKnownIssues_CheckLineBreakMode_FromXIB:(BOOL)fromXIB;
 -(void)warnAboutKnownIssues_CheckAdjustsFontSizeToFitWidth_FromXIB:(BOOL)fromXIB;
 #endif
+
+@property (nonatomic, retain) NSArray * relatedObjects;
+
 @end
 
 NSDataDetector* sharedReusableDataDetector(NSTextCheckingTypes types);
@@ -177,11 +187,12 @@ NSDataDetector* sharedReusableDataDetector(NSTextCheckingTypes types)
 -(void)dealloc
 {
 	[self resetTextFrame]; // CFRelease the text frame
-    [[OHAttributedLabel relatedHrefLabelsCache] removeObjectForKey:self];
+    [_relatedObjects enumerateObjectsUsingBlock:^(OHAttributedRelatedObject * obj, NSUInteger idx, BOOL *stop) {
+        if (obj.relatedLabel == self) {
+            obj.relatedLabel = nil;
+        }
+    }];
 }
-
-
-
 
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -289,7 +300,7 @@ NSDataDetector* sharedReusableDataDetector(NSTextCheckingTypes types)
                  applyLinkStyle(result);
              }
          }];
-
+        
         // Automatically Detected Links
         if (plainText && (self.automaticallyAddLinksForType > 0))
         {
@@ -448,15 +459,15 @@ NSDataDetector* sharedReusableDataDetector(NSTextCheckingTypes types)
 -(void)_gestureRecognised:(UIGestureRecognizer*)recogniser
 {
     //////////////////////////////////////////////////////////////////////
-    NSArray * relatedHrefLabels = [[OHAttributedLabel relatedHrefLabelsCache] objectForKey:self];
-    if (relatedHrefLabels.count > 0) {
+    NSArray * relatedObjects = self.relatedObjects;
+    if (relatedObjects.count > 0) {
         switch (recogniser.state) {
             case UIGestureRecognizerStateBegan: {
-                [relatedHrefLabels enumerateObjectsUsingBlock:^(OHAttributedLabel *obj, NSUInteger idx, BOOL *stop) {
-                    if (![obj isEqual:self]) {
-                        NSTextCheckingResult *activeLink = [obj linkAtCharacterIndex:0];
-                        [obj setValue:activeLink forKey:@"activeLink"];
-                        [obj setNeedsDisplay];
+                [relatedObjects enumerateObjectsUsingBlock:^(OHAttributedRelatedObject *obj, NSUInteger idx, BOOL *stop) {
+                    if (obj.relatedLabel) {
+                        NSTextCheckingResult *activeLink = [obj.relatedLabel linkAtCharacterIndex:0];
+                        [obj.relatedLabel setValue:activeLink forKey:@"activeLink"];
+                        [obj.relatedLabel setNeedsDisplay];
                     }
                 }];
             }
@@ -464,10 +475,10 @@ NSDataDetector* sharedReusableDataDetector(NSTextCheckingTypes types)
             case UIGestureRecognizerStateEnded:
             case UIGestureRecognizerStateCancelled:
             case UIGestureRecognizerStateFailed: {
-                [relatedHrefLabels enumerateObjectsUsingBlock:^(OHAttributedLabel *obj, NSUInteger idx, BOOL *stop) {
-                    if (![obj isEqual:self]) {
-                        [obj setValue:nil forKey:@"activeLink"];
-                        [obj setNeedsDisplay];
+                [relatedObjects enumerateObjectsUsingBlock:^(OHAttributedRelatedObject *obj, NSUInteger idx, BOOL *stop) {
+                    if (obj.relatedLabel) {
+                        [obj.relatedLabel setValue:nil forKey:@"activeLink"];
+                        [obj.relatedLabel setNeedsDisplay];
                     }
                 }];
             }
@@ -475,9 +486,9 @@ NSDataDetector* sharedReusableDataDetector(NSTextCheckingTypes types)
             case UIGestureRecognizerStateChanged:
             case UIGestureRecognizerStatePossible:
                 break;
-        }        
+        }
     }
-
+    
     //////////////////////////////////////////////////////////////////////
     CGPoint pt = [recogniser locationInView:self];
     
@@ -669,7 +680,7 @@ NSDataDetector* sharedReusableDataDetector(NSTextCheckingTypes types)
 			}
             
             CFRange fullRunRange = CTRunGetStringRange(run);
-
+            
             CFIndex startActiveLinkInRun = (CFIndex)activeLinkRange.location - fullRunRange.location;
             CFIndex endActiveLinkInRun = startActiveLinkInRun + (CFIndex)activeLinkRange.length;
             
@@ -734,7 +745,7 @@ NSDataDetector* sharedReusableDataDetector(NSTextCheckingTypes types)
 @synthesize catchTouchesOnLinksOnTouchBegan = _catchTouchesOnLinksOnTouchBegan;
 @synthesize extendBottomToFit = _extendBottomToFit;
 @synthesize delegate = _delegate;
-
+@synthesize relatedObjects = _relatedObjects;
 
 -(void)resetAttributedText
 {
@@ -834,7 +845,7 @@ NSDataDetector* sharedReusableDataDetector(NSTextCheckingTypes types)
 	
 #if OHATTRIBUTEDLABEL_WARN_ABOUT_KNOWN_ISSUES
 	[self warnAboutKnownIssues_CheckLineBreakMode_FromXIB:NO];
-#endif	
+#endif
 }
 
 -(void)setCenterVertically:(BOOL)val
@@ -846,7 +857,7 @@ NSDataDetector* sharedReusableDataDetector(NSTextCheckingTypes types)
 -(void)setAutomaticallyAddLinksForType:(NSTextCheckingTypes)types
 {
 	_automaticallyAddLinksForType = types;
-
+    
     NSDataDetector* dd = sharedReusableDataDetector(types);
     _linksDetector = dd;
     [self setNeedsRecomputeLinksInText];
@@ -926,7 +937,7 @@ NSDataDetector* sharedReusableDataDetector(NSTextCheckingTypes types)
         {
             NSLog(@"  (To avoid this warning, uncheck the 'Autoshrink' property in your XIB file)");
         }
-
+        
 	}
 }
 
@@ -944,22 +955,22 @@ NSDataDetector* sharedReusableDataDetector(NSTextCheckingTypes types)
               "It will be ignored by OHAttributedLabel. See https://github.com/AliSoftware/OHAttributedLabel/issues/34");
         NSLog(@"  (To avoid this warning, set the numberOfLines property to 0)");
     }
-
+    
 	[super setNumberOfLines:nbLines];
 }
 #endif
 
-+ (NSCache *) relatedHrefLabelsCache {
-    static dispatch_once_t onceToken;
-    static NSCache *relatedHrefLabelsCache;
-    dispatch_once(&onceToken, ^{
-        relatedHrefLabelsCache = [[NSCache alloc] init];
-    });
-    return relatedHrefLabelsCache;
-}
-
-- (void) setRelatedHrefLabels:(NSArray *)hrefLabels {
-    [[OHAttributedLabel relatedHrefLabelsCache] setObject:hrefLabels forKey:self];
+- (void) setRelatedHrefLabels:(NSArray *)relatedHrefLabels
+{
+    NSMutableArray * array = [NSMutableArray array];
+    [relatedHrefLabels enumerateObjectsUsingBlock:^(OHAttributedLabel * obj, NSUInteger idx, BOOL *stop) {
+        if (obj != self && [obj isKindOfClass:[OHAttributedLabel class]]) {
+            OHAttributedRelatedObject * relatedObject = [OHAttributedRelatedObject new];
+            relatedObject.relatedLabel = obj;
+            [array addObject:relatedObject];
+        }
+    }];
+    _relatedObjects = array;
 }
 
 @end
