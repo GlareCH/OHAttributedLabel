@@ -187,10 +187,12 @@ NSDataDetector* sharedReusableDataDetector(NSTextCheckingTypes types)
 -(void)dealloc
 {
 	[self resetTextFrame]; // CFRelease the text frame
-    [_relatedObjects enumerateObjectsUsingBlock:^(OHAttributedRelatedObject * obj, NSUInteger idx, BOOL *stop) {
-        if (obj.relatedLabel == self) {
-            obj.relatedLabel = nil;
-        }
+    [_relatedObjects enumerateObjectsWithOptions:NSEnumerationConcurrent usingBlock:^(OHAttributedRelatedObject * obj, NSUInteger idx, BOOL *stop) {
+        [obj.relatedLabel.relatedObjects enumerateObjectsWithOptions:NSEnumerationConcurrent usingBlock:^(OHAttributedRelatedObject * obj2, NSUInteger idx2, BOOL *stop2) {
+            if (obj2.relatedLabel == self) {
+                obj2.relatedLabel = nil;
+            }
+        }];
     }];
 }
 
